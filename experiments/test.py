@@ -52,7 +52,11 @@ frequencies_filtered = frequencies[mask]
 hps_filtered = hps[mask]
 # Find peak
 peak_index = np.argmax(hps_filtered)
-interpolated_frequency = interpolate_peak(peak_index, hps_filtered, frequencies_filtered)
+interpolated_frequency = interpolate_peak(
+    peak_index,
+    hps_filtered,
+    frequencies_filtered
+)
 print("Peak index:", peak_index)
 print("Raw frequency:", frequencies_filtered[peak_index])
 print("interpolated:", interpolated_frequency)

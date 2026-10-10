@@ -1,8 +1,7 @@
-
-from ast import Break
 import tkinter as tk
 from queue import Empty, Queue
-
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class TunerGUI:
     def __init__(self, root, result_queue):
@@ -40,6 +39,22 @@ class TunerGUI:
         )
         self.status_label.pack(pady=10)
 
+        # Spectrum Figure
+        self.figure = Figure(figsize=(6, 3), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+
+        self.ax.set_xlabel("Frequency (Hz)")
+        self.ax.set_ylabel("Magnitude (dB)")
+        self.ax.set_xlim(50, 1000)
+        self.ax.set_ylim(-80, 0)
+        self.ax.grid(True)
+
+        self.spectrum_line, = self.ax.plot([], [])
+        self.peak_marker, = self.ax.plot([], [], "ro")
+
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
         # Check for new measurements every 50 milliseconds
         self.root.after(50, self.check_queue)
 
@@ -54,8 +69,16 @@ class TunerGUI:
                 break
 
         if latest_result is not None:
-            note, frequency, cents = latest_result
-
+            (
+                note,
+                frequency,
+                cents,
+                db,
+                frequencies,
+                magnitude_db,
+                peak_frequency,
+                peak_magnitude_db,
+            ) = latest_result
             self.note_label.config(text=note)
             self.frequency_label.config(
                 text=f"{frequency:.2f} Hz"
@@ -69,9 +92,13 @@ class TunerGUI:
                 status = f"Sharp ({cents:+.1f} cents)"
 
             self.status_label.config(text=status)
+            # update spectrum line
+            self.spectrum_line.set_data(frequencies, magnitude_db)
+            self.peak_marker.set_data([peak_frequency], [peak_magnitude_db])
 
+            self.canvas.draw_idle()
         # Schedule the next check
-        self.root.after(50, self.check_queue)
+        self.root.after(100, self.check_queue)
 
 
 # Allow us to test the GUI without starting the microphone

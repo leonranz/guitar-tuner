@@ -1,5 +1,5 @@
 import numpy as np
-from settings import fft_size, max_frequency, min_frequency, sample_rate
+from .settings import fft_size, max_frequency, min_frequency, sample_rate
 
 def calculate_fft(audio_buffer):
     # windowing to improve fft spectrum
@@ -12,7 +12,10 @@ def calculate_fft(audio_buffer):
     )
     # calculate and normalize magnitude of the spectrum
     magnitude = np.abs(spectrum)
-    magnitude = magnitude / np.max(magnitude)
+    max_magnitude = np.max(magnitude)
+
+    if max_magnitude > 0:
+        magnitude = magnitude / max_magnitude
 
     # calculate freqeuncies of the fft bins
     frequencies = np.fft.rfftfreq(fft_size, 1/sample_rate)
@@ -22,8 +25,8 @@ def calculate_fft(audio_buffer):
 def calculate_hps(magnitude, factor):
     hps = magnitude.copy()
 
-    for factor in range(2, factor + 1):
-        magnitude_compressed = magnitude[::factor]
+    for factors in range(2, factor + 1):
+        magnitude_compressed = magnitude[::factors]
         hps[:len(magnitude_compressed)] *= magnitude_compressed
     return hps
 # interpolate the peaks to improve accuracy
@@ -37,8 +40,10 @@ def interpolate_peak(peak_index, magnitude_filtered, frequencies_filtered):
             center_frequency = frequencies_filtered[peak_index]
             delta = 0.5 * (left - right)/(left - 2 * center + right)
 
-            frequency_resolution = sample_rate / fft_size
-
+            # frequency_resolution = sample_rate / fft_size
+            frequency_resolution = (
+                frequencies_filtered[1] - frequencies_filtered[0]
+            )
             return center_frequency + delta * frequency_resolution
 
 
@@ -48,4 +53,9 @@ def find_peak(hps, frequencies):
     frequencies_filtered = frequencies[mask]
     hps_filtered = hps[mask]
     # Find peak
-    return np.argmax(hps_filtered), frequencies_filtered
+    return np.argmax(hps_filtered), hps_filtered, frequencies_filtered
+
+def calculate_db(audio_buffer):
+    rms = np.sqrt(np.mean(audio_buffer ** 2))
+    db = 20 * np.log10(max(rms, 1e-10))
+    return db
